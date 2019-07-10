@@ -3,7 +3,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -12,9 +15,17 @@ import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorConvertOp;
 import java.io.File;
-import java.io.IOException;
 
-import javax.imageio.ImageIO;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+
+
+import org.apache.poi.sl.usermodel.PictureData;
+import org.apache.poi.util.IOUtils;
+import org.apache.poi.xslf.usermodel.XMLSlideShow;
+import org.apache.poi.xslf.usermodel.XSLFPictureData;
+import org.apache.poi.xslf.usermodel.XSLFPictureShape;
+import org.apache.poi.xslf.usermodel.XSLFSlide;
 
 /**
  * 
@@ -26,7 +37,22 @@ import javax.imageio.ImageIO;
  */
 public class Main {
 
-	public static void executeCmd(String video_path, String image_path) throws IOException {
+	public static void executeCmd(String cmd) throws IOException {
+		try {
+			Runtime rt = Runtime.getRuntime();
+			System.out.println("Process: " + cmd);
+			Process proc = rt.exec(cmd.split(" "));
+
+			int exitVal = proc.waitFor();
+			//System.out.println("Process finished ");
+			// System.out.println("Process exitValue: " + exitVal);
+		} catch (Throwable t) {
+			t.printStackTrace();
+		}
+	}
+
+	public static void executeCmd(String video_path, String image_path, String image_name) throws IOException {
+		
 
 		String ffmpeg_path = "/usr/local/bin/ffmpeg";
 
@@ -40,7 +66,7 @@ public class Main {
 		commands.add("600");
 		commands.add("-r");
 		commands.add("1/2");
-		commands.add(image_path + "snap-%3d.jpg");
+		commands.add(image_path + image_name + "-%3d.jpg");
 
 		ProcessBuilder builder = new ProcessBuilder(commands);
 		Process process = builder.start();
@@ -68,7 +94,7 @@ public class Main {
 		File imageFile2 = new File(b);
 
 		try {
-			if (99 < ImgSimilarity.getSimilarity(imageFile1, imageFile2))
+			if (99.9 < ImgSimilarity.getSimilarity(imageFile1, imageFile2))
 				return true;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -78,30 +104,176 @@ public class Main {
 
 	}
 
+	public static void checkDuplicateAndDelete(String image_path, String image_name) throws IOException {
+		int photo_count = new File(image_path).listFiles().length-1;
+		
+		String p1 = image_path+image_name+String.format("-%3d.jpg", 1);
+		String p2 = image_path+image_name+String.format("-%3d.jpg", 2);
+		
+		for (int i = 1; i < photo_count; i++) {
+			
+		//	System.out.println("comparing snap " +i+" and "+(i+1));
+			p1 = image_path+image_name+String.format("-%03d.jpg", i);
+			p2 = image_path+image_name+String.format("-%03d.jpg", i+1);
+			
+			if (isSame(p1, p2)) {
+				//System.out.println("same");
+				executeCmd("rm "+p1);
+			} 
+				//System.out.println("different");
+		}
+	}
+
 	/**
 	 * @param args
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
+		
+		//final String path = "/Users/edwin/Desktop/test/";
+		//final String photoPath = "/Users/edwin/Desktop/test/snap-005.jpg";
+		
 
+		long startTime = System.currentTimeMillis(); //获取开始时间
+//	
+//		// TODO Auto-generated method stub
+		String ffmpeg_path = "/usr/local/bin/ffmpeg";
 		String video_path = "/Users/edwin/Desktop/test1.mp4";
 		String image_path = "/Users/edwin/Desktop/test/";
+		String image_name = "snap";
+		String pptName = "test1";
 
+		System.out.println("================================================================================");
 		System.out.println("start screen shooting");
+		executeCmd(ffmpeg_path + " -ss 1 -i " + video_path + " -vframes 600 -r 1/2 " + image_path + image_name
+				+ "-%3d.jpg");
+		
+		//-vf \"crop=960:720:160:0\"
 		// executeCmd(video_path, image_path);
+		
 		System.out.println("finish screen shoot");
+		
+		System.out.println("================================================================================");
+		System.out.println();
+		
+		System.out.println("================================================================================");
+		System.out.println("start checking duplicate");
+		checkDuplicateAndDelete(image_path,image_name);
+		System.out.println("finish checking duplicate");
+		System.out.println("================================================================================");
+		System.out.println();
+//		
+//		File folder = new File(image_path);
+//		File[] listOfFiles = folder.listFiles();
+//		Arrays.sort(listOfFiles);
+//
+//		for (File file : listOfFiles) {
+//		    if (file.isFile()) {
+//		    	
+//		    	String photoName = file.getName();
+//		    	if(photoName.substring(photoName.length() - 4).equals(".jpg")) {
+//		    		executeCmd(ffmpeg_path+" -i "+image_path+photoName+" -vf crop=960:720:160:0 "+image_path+"new"+photoName);
+//		    	}
+//		    
+//		      
+//		    }
+//		}
+//		
+		
 
-		String p1 = "/Users/edwin/Desktop/test/snap-001.jpg";
-		String p2 = "/Users/edwin/Desktop/test/snap-006.jpg";
+		
+//		
 
-		if (isSame(p1, p2)) {
-			System.out.println("same");
-		} else {
-			System.out.println("different");
+		System.out.println("================================================================================");
+
+		System.out.println("start generating powerpoint");
+//		 // creating a presentation
+        XMLSlideShow ppt = new XMLSlideShow();
+        
+        
+
+        // creating a slide in it
+        
+        
+		File folder = new File(image_path);
+		File[] listOfFiles = folder.listFiles();
+		Arrays.sort(listOfFiles);
+
+		for (File file : listOfFiles) {
+		    if (file.isFile()) {
+		        //System.out.println(path+file.getName());
+		    	
+		        String photoPath = image_path+file.getName();
+		        String newPhotoPath = image_path+"new"+file.getName();
+		        
+		        if(photoPath.substring(photoPath.length() - 4).equals(".jpg")) {
+		        	
+		        	executeCmd(ffmpeg_path+" -i "+photoPath+" -vf crop=960:720:160:0 "+newPhotoPath);
+		        	executeCmd("rm "+ photoPath);
+		        	
+		        //executeCmd(ffmpeg_path+" -i "+photoPath+" -vf \"crop=960:720:160:0\" "+image_path+"new"+file.getName());
+//		        
+//		        ffmpeg -i in.mp4 -filter:v "crop=out_w:out_h:x:y" out.mp4
+//		        	
+
+		        XSLFSlide slide = ppt.createSlide();
+			        
+		        File image = new File(newPhotoPath);
+		        
+
+		        // converting it into a byte array
+		        byte[] picture = IOUtils.toByteArray(new FileInputStream(image));
+
+		        // adding the image to the presentation
+		        XSLFPictureData idx = ppt.addPicture(picture, PictureData.PictureType.PNG);
+
+		        // creating a slide with given picture on it
+		        XSLFPictureShape pic = slide.createPicture(idx);
+		        
+		        executeCmd("rm "+ newPhotoPath);
+		        
+		        //System.out.println(photoPath+file.getName());
+		        }
+		        
+		    }
 		}
 
+        // reading an image
+        
+
+        // creating a file object
+        File file = new File(image_path+pptName+".pptx");
+        FileOutputStream out = new FileOutputStream(file);
+
+        // saving the changes to a file
+        ppt.write(out);
+
+       // System.out.println("image added successfully");
+        out.close();
+		
+
+		long endTime = System.currentTimeMillis(); //获取结束时间
+		
+		System.out.println("finish generating powerpoint");
+		System.out.println("================================================================================");
+		
+		System.out.println("================================================================================");
+		System.out.println("All Finished");
+		System.out.println("RunTime：" + (endTime - startTime)/1000 + "s"); //
+		
 	}
+
+	//
+	// String p1 = "/Users/edwin/Desktop/test/snap-001.jpg";
+	// String p2 = "/Users/edwin/Desktop/test/snap-006.jpg";
+	//
+	// if (isSame(p1, p2)) {
+	// System.out.println("same");
+	// } else {
+	// System.out.println("different");
+	// }
+	// System.out.println(new File(image_path).listFiles().length);
+	//
 
 }
 
@@ -115,7 +287,7 @@ class ImgSimilarity {
 		int hammingDistance = getHammingDistance(pixels1, pixels2);
 		// 通过汉明距离计算相似度，取值范围 [0.0, 1.0]
 		double similarity = calSimilarity(hammingDistance) * 100;
-		System.out.println("相似度:" + similarity + "%");
+		// System.out.println("相似度:" + similarity + "%");
 		return similarity;
 	}
 
